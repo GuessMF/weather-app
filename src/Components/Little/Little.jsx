@@ -1,8 +1,16 @@
 import React, {useState, useEffect} from "react";
 import "./little.scss";
 import axios from "axios";
+import {useDispatch} from "react-redux";
+import {setCurrCity} from "../../currCitySlice";
 
-export default function Little({name, onClick}) {
+export default function Little({name}) {
+  const dispatch = useDispatch();
+
+  const handleOnClick = () => {
+    dispatch(setCurrCity(name));
+  };
+
   const [weatherData, setWeatherData] = useState(null);
 
   useEffect(() => {
@@ -21,7 +29,7 @@ export default function Little({name, onClick}) {
   }, [name]);
 
   return (
-    <div className="little" onClick={() => onClick(name)}>
+    <div className="little" onClick={handleOnClick}>
       <div className="little__content">
         <h2>{name}</h2>
         {weatherData && (

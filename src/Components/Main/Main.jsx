@@ -1,16 +1,29 @@
 import React, {useState, useEffect} from "react";
 import "./main.scss";
 import axios from "axios";
-import add_icon from "../../assets/icons/add_icon.png";
+import delete_icon from "../../assets/icons/delete_icon.png";
 import added_icon from "../../assets/icons/added_icon.png";
 import search_icon from "../../assets/icons/search_icon.png";
-export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
+import change_icon from "../../assets/icons/change_icon.png";
+
+import {useDispatch, useSelector} from "react-redux";
+import {setCurrCity, selectCurrCity} from "../../currCitySlice";
+
+export default function Main({favoriteCities, setFavoriteCities}) {
+  const dispatch = useDispatch();
+  const currCity = useSelector(selectCurrCity);
+
   const [weatherData, setWeatherData] = useState(null);
   const [city, setCity] = useState("");
   const [currentDate, setCurrentDate] = useState(new Date());
-
-  //   const [favoriteCities, setFavoriteCities] = useState([]);
   const [isFavorite, setIsFavorite] = useState(false);
+
+  const [currentUnits, setCurrentUnits] = useState("C");
+  const [units, setUnits] = useState("F");
+
+  const [celsuim, setCelsuim] = useState("");
+
+  const [farengeite, setFarengeite] = useState("");
 
   const months = {
     0: "Января",
@@ -36,19 +49,33 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
     6: "Воскресенье",
   };
 
-  const fetchWeather = async (city) => {
+  const fetchWeather = async (currCity) => {
     try {
       const response = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=72f00aa027f15c09f5fe323a4e454a6f&lang=ru`
+        `https://api.openweathermap.org/data/2.5/weather?q=${currCity}&appid=72f00aa027f15c09f5fe323a4e454a6f&lang=ru`
       );
       setWeatherData(response.data);
     } catch (error) {
-      console.error("Error fetching weather data:", error);
+      if (error.response && error.response.status === 404) {
+        console.error("Город не найден");
+      } else {
+        console.error("Ошибка при получении данных:", error.message);
+      }
     }
   };
 
-  const findCity = (city) => {
+  useEffect(() => {
+    if (weatherData) {
+      const celsuimValue = Math.round(weatherData.main.temp - 273.15);
+      const farengeitValue = celsuimValue * 1.8 + 32;
+      setCelsuim(celsuimValue);
+      setFarengeite(farengeitValue);
+    }
+  }, [weatherData]);
+
+  const findCity = () => {
     if (city !== "") {
+      dispatch(setCurrCity(city));
       fetchWeather(city);
     }
   };
@@ -66,11 +93,10 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
   }, []);
 
   useEffect(() => {
-    if (currentCity) {
-      setCity("");
-      fetchWeather(currentCity);
+    if (currCity) {
+      fetchWeather(currCity);
     }
-  }, [currentCity]);
+  }, [currCity]);
 
   const formatDate = (date) => {
     return `${date.getDate()}-${months[date.getMonth()]}-${date.getFullYear()}`;
@@ -91,12 +117,12 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
   }, []);
 
   useEffect(() => {
-    setIsFavorite(favoriteCities.includes(city));
-  }, [city, favoriteCities]);
+    setIsFavorite(favoriteCities.includes(currCity));
+  }, [currCity, favoriteCities]);
 
   const addFavoriteCity = () => {
-    if (!favoriteCities.includes(city)) {
-      const updatedCities = [...favoriteCities, city];
+    if (!favoriteCities.includes(currCity)) {
+      const updatedCities = [...favoriteCities, currCity];
       setFavoriteCities(updatedCities);
       localStorage.setItem("favoriteCities", JSON.stringify(updatedCities));
       setIsFavorite(true);
@@ -104,20 +130,48 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
   };
 
   const removeFavoriteCity = () => {
-    const updatedCities = favoriteCities.filter((c) => c !== city);
-    setFavoriteCities(updatedCities);
-    localStorage.setItem("favoriteCities", JSON.stringify(updatedCities));
-    setIsFavorite(false);
+    if (currCity) {
+      const updatedCities = favoriteCities.filter((c) => c !== currCity);
+      setFavoriteCities(updatedCities);
+      localStorage.setItem("favoriteCities", JSON.stringify(updatedCities));
+      setIsFavorite(false);
+    }
   };
 
+  const handleChangeUnits = () => {
+    if (currentUnits === "C") {
+      setUnits("C");
+      setCurrentUnits("F");
+    } else {
+      setUnits("F");
+      setCurrentUnits("C");
+    }
+  };
+
+  const cities = [
+    "Москва",
+    "Санкт-Петербург",
+    "Новосибирск",
+    "Екатеринбург",
+    "Казань",
+    "Лондон",
+    "Минск",
+  ];
+  const handleCityClick = (event) => {
+    const selectedCity = event.target.value;
+    setCity(selectedCity);
+  };
+  useEffect(() => {
+    findCity();
+  }, [city]);
   return (
     <div className="main">
-      {city && (
+      {currCity && (
         <button
           className="main__add_btn"
           onClick={isFavorite ? removeFavoriteCity : addFavoriteCity}
         >
-          <img src={add_icon} />
+          <img src={isFavorite ? delete_icon : added_icon} />
         </button>
       )}
 
@@ -128,10 +182,23 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
           onChange={handleInputChange}
           placeholder="Введите город"
         />
-        <button onClick={() => findCity(city)}>
+        <button onClick={findCity}>
           <img src={search_icon} />
         </button>
       </div>
+
+      <select
+        value={city}
+        onChange={(event) => handleCityClick(event)}
+        className="main__select"
+      >
+        <option value="">Выберите город</option>
+        {cities.map((city, index) => (
+          <option key={index} value={city}>
+            {city}
+          </option>
+        ))}
+      </select>
 
       <div className="main__content">
         {weatherData && (
@@ -146,11 +213,19 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
 
             <ul className="main__list">
               <h2 className="main__city">{weatherData.name}</h2>
-              <h3 className="main__temperature">
-                {Math.round(weatherData.main.temp - 273.15)}°C
-              </h3>
+              <div className="main__temperature_box">
+                <h3 className="main__temperature">
+                  {units === "F" ? celsuim : farengeite}
+                </h3>
+                <span>°{currentUnits}</span>
+                <button onClick={handleChangeUnits}>
+                  <img src={change_icon} />
+                </button>
+                <span>°{units}</span>
+              </div>
+
               <h3 className="main__feels_like">
-                Ошущается как {Math.round(weatherData.main.feels_like - 273.15)}
+                Ошущается как {units === "F" ? celsuim : farengeite}°
               </h3>
             </ul>
 
@@ -167,10 +242,9 @@ export default function Main({currentCity, favoriteCities, setFavoriteCities}) {
           </div>
         )}
 
-        {city && <hr />}
+        {currCity && <hr />}
 
         <ul className="main__date">
-          {" "}
           <p>{weekDay(currentDate)}</p>
           <p>{formatDate(currentDate)}</p>
           <p>{formatTime(currentDate)}</p>

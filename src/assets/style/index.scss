@@ -42,10 +42,18 @@ body {
   // min-height: 100%;
   width: 100%;
   margin: 0 auto;
-  background-color: #d1cfcf;
+  background-color: rgba(207, 203, 203, 0.3);
+
   padding: 20px;
   border-radius: 20px;
   height: fit-content;
+  @media (max-width: 768px) {
+    flex-direction: column !important;
+    gap: 20px;
+  }
+  @media (max-width: 550px) {
+    padding: 10px;
+  }
 }
 .container {
   max-width: $maxWidthF + px;
@@ -97,4 +105,10 @@ h1 {
   flex-wrap: wrap;
   padding: 10px;
   justify-items: center;
+  @media (max-width: 1000px) {
+    width: 40%;
+  }
+  @media (max-width: 768px) {
+    width: 100%;
+  }
 }
